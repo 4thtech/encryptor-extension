@@ -56,7 +56,7 @@ const restore = async () => {
         name="seeds"
         v-model="form.seeds"
         placeholder="Seeds"
-        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm"
+        class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm"
       />
     </div>
 

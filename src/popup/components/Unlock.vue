@@ -41,7 +41,7 @@ const unlock = async () => {
       <Input v-model="password" type="password" @keyup.enter="unlock" />
       <div v-if="error" class="bg-red-100 p-2 rounded-md mt-2">{{ error }}</div>
       <div class="mt-4">
-        <Button @click="unlock">Unlock</Button>
+        <Button @click="unlock" :disabled="!password">Unlock</Button>
       </div>
     </div>
   </div>

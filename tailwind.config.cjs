@@ -7,7 +7,11 @@ module.exports = {
     "./src/**/**/**/**/*.{js,ts,jsx,tsx,vue}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: '#2cd8a7',
+      }
+    },
   },
   plugins: [
     require('@tailwindcss/forms'),

@@ -17,6 +17,6 @@ const handleEvent = (event: Event) => {
     :value="modelValue"
     type="text"
     @input="handleEvent"
-    class="block w-full rounded-md border-neutral-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
+    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm"
   />
 </template>

@@ -14,7 +14,7 @@ const router = useRouter();
 
     <div class="flex-1 flex items-center">
       <div class="text-center">
-        <div class="text-center text-[1rem] bg-gray-100 p-2">
+        <div class="text-center text-[1rem] bg-gray-100 p-2 select-all">
           {{ store.wallet?.mnemonic?.phrase }}
         </div>
         <Button class="mt-10" @click="router.push('/main')">I wrote them somewhere safe</Button>
