@@ -5,9 +5,16 @@ const wallet = new (class {
   protected wallet: HDNodeWallet | undefined;
   protected locked: boolean | undefined;
   constructor() {
-    chrome.storage.local.get().then((data: { [key: string]: any }) => {
-      if (data?.wallet) {
-        this.locked = true;
+    chrome.storage.session.get().then((data: { [key: string]: any }) => {
+      if (data?.phrase) {
+        this.wallet = ethers.Wallet.fromPhrase(data.phrase);
+        this.locked = false;
+      } else {
+        chrome.storage.local.get().then((data: { [key: string]: any }) => {
+          if (data?.wallet) {
+            this.locked = true;
+          }
+        });
       }
     });
 
@@ -18,11 +25,13 @@ const wallet = new (class {
     this.wallet = ethers.Wallet.createRandom();
     const encryptedWallet = await this.wallet.encrypt(password);
     await chrome.storage.local.set({ wallet: encryptedWallet });
+    chrome.storage.session.set({phrase: this.wallet.mnemonic?.phrase});
     this.locked = false;
     return this.wallet;
   }
 
   public lockWallet() {
+    chrome.storage.session.clear();
     this.wallet = undefined;
     this.locked = true;
   }
@@ -36,6 +45,7 @@ const wallet = new (class {
           password,
         )) as HDNodeWallet;
         this.locked = false;
+        chrome.storage.session.set({phrase: this.wallet.mnemonic?.phrase});
         return this.wallet;
       } catch (e) {
         return undefined;
@@ -49,6 +59,7 @@ const wallet = new (class {
       const encryptedWallet = await this.wallet.encrypt(password);
       this.locked = false;
       await chrome.storage.local.set({ wallet: encryptedWallet });
+      chrome.storage.session.set({phrase: this.wallet.mnemonic?.phrase});
       return this.wallet;
     } catch (e) {
       console.log(e);
