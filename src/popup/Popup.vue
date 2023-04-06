@@ -1,21 +1,31 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { store } from '../state/store';
 import { useRouter } from 'vue-router';
+import { MessageType, WalletState } from '@/types';
+import { store } from '@/state/store';
 
 const router = useRouter();
 
 onMounted(async () => {
   const wallet = await chrome.runtime.sendMessage({
-    msg: 'getWallet',
+    msg: MessageType.GET_WALLET,
   });
-  if (wallet.locked === false) {
-    router.push('/main');
-  } else if (wallet.locked === true) {
-    router.push('/unlock');
-  } else {
-    router.push('/popup.html');
+
+  switch (wallet.state) {
+    case WalletState.UNLOCKED:
+      await router.push('/main');
+      break;
+
+    case WalletState.LOCKED:
+      await router.push('/unlock');
+      break;
+
+    case WalletState.NOT_GENERATED:
+    default:
+      await router.push('/popup.html');
+      break;
   }
+
   store.wallet = wallet;
 });
 </script>

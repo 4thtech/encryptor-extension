@@ -1,112 +1,122 @@
-import { ethers } from 'ethers';
-import { HDNodeWallet } from 'ethers';
+import { ethers, HDNodeWallet } from 'ethers';
+import { MessageType, WalletState } from '@/types';
 
-const wallet = new (class {
-  protected wallet: HDNodeWallet | undefined;
-  protected locked: boolean | undefined;
+class BackgroundScript {
+  private wallet?: HDNodeWallet;
+
   constructor() {
-    chrome.storage.session.get().then((data: { [key: string]: any }) => {
-      if (data?.phrase) {
-        this.wallet = ethers.Wallet.fromPhrase(data.phrase);
-        this.locked = false;
-      } else {
-        chrome.storage.local.get().then((data: { [key: string]: any }) => {
-          if (data?.wallet) {
-            this.locked = true;
-          }
-        });
-      }
-    });
-
     this.addListener();
   }
 
-  public async createNewWallet(password: string): Promise<HDNodeWallet> {
-    this.wallet = ethers.Wallet.createRandom();
-    const encryptedWallet = await this.wallet.encrypt(password);
-    await chrome.storage.local.set({ wallet: encryptedWallet });
-    chrome.storage.session.set({phrase: this.wallet.mnemonic?.phrase});
-    this.locked = false;
-    return this.wallet;
+  private async storeEncryptedWallet(wallet: HDNodeWallet, password: string): Promise<void> {
+    const encryptedWallet = await wallet.encrypt(password);
+    await chrome.storage.local.set({ encryptedWallet });
+  }
+
+  private async getEncryptedWallet(): Promise<string | undefined> {
+    const { encryptedWallet } = await chrome.storage.local.get();
+    return encryptedWallet;
+  }
+
+  public async getWalletState(): Promise<WalletState> {
+    if (this.wallet) {
+      return WalletState.UNLOCKED;
+    }
+
+    return (await this.getEncryptedWallet()) ? WalletState.LOCKED : WalletState.NOT_GENERATED;
   }
 
   public lockWallet() {
-    chrome.storage.session.clear();
     this.wallet = undefined;
-    this.locked = true;
   }
 
-  public async unlockWallet(password: string): Promise<HDNodeWallet | undefined> {
-    const data = await chrome.storage.local.get();
-    if (data.wallet) {
-      try {
-        this.wallet = (await ethers.Wallet.fromEncryptedJson(
-          data.wallet,
-          password,
-        )) as HDNodeWallet;
-        this.locked = false;
-        chrome.storage.session.set({phrase: this.wallet.mnemonic?.phrase});
-        return this.wallet;
-      } catch (e) {
-        return undefined;
-      }
-    }
+  public async createNewWallet(password: string): Promise<HDNodeWallet> {
+    const wallet = ethers.Wallet.createRandom();
+    await this.storeEncryptedWallet(wallet, password);
+    this.wallet = wallet;
+
+    return this.wallet;
   }
 
-  public async restoreWallet(seeds: string, password: string): Promise<HDNodeWallet | undefined> {
+  private async unlockWallet(password: string): Promise<HDNodeWallet | undefined> {
+    const encryptedWallet = await this.getEncryptedWallet();
+
+    if (!encryptedWallet) return undefined;
+
+    this.wallet = (await ethers.Wallet.fromEncryptedJson(encryptedWallet, password).catch(
+      () => undefined,
+    )) as HDNodeWallet;
+
+    return this.wallet;
+  }
+
+  private async restoreWallet(seeds: string, password: string): Promise<HDNodeWallet | undefined> {
+    let wallet: HDNodeWallet;
     try {
-      this.wallet = await ethers.Wallet.fromPhrase(seeds);
-      const encryptedWallet = await this.wallet.encrypt(password);
-      this.locked = false;
-      await chrome.storage.local.set({ wallet: encryptedWallet });
-      chrome.storage.session.set({phrase: this.wallet.mnemonic?.phrase});
-      return this.wallet;
+      wallet = await ethers.Wallet.fromPhrase(seeds);
     } catch (e) {
-      console.log(e);
       return undefined;
     }
+
+    await this.storeEncryptedWallet(wallet, password);
+    this.wallet = wallet;
+
+    return this.wallet;
   }
 
   private addListener() {
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.msg === 'createNewWallet') {
-        (async () => {
-          const wallet = await this.createNewWallet(request.data.password);
-          sendResponse(wallet);
-        })();
-        return true;
-      } else if (request.msg === 'unlockWallet') {
-        (async () => {
-          const key = await this.unlockWallet(request.data.password);
-          sendResponse(key);
-        })();
-        return true;
-      } else if (request.msg === 'restoreWallet') {
-        (async () => {
-          const key = await this.restoreWallet(request.data.seeds, request.data.password);
-          sendResponse(key);
-        })();
-        return true;
-      } else if (request.msg === 'getWallet') {
-        (async () => {
-          await chrome.storage.local.get();
-          sendResponse({ wallet: this.wallet, locked: this.locked });
-        })();
-        return true;
-      } else if (request.msg === 'lockWallet') {
-        this.lockWallet();
-      }
-
-      if (!this.wallet) return;
-
-      if (request.detail?.type === 'getPublicKey') {
-        sendResponse({ publicKey: this.wallet.publicKey, request_id: request.detail.request_id });
-      } else if (request.detail?.type === 'computeSharedSecretKey') {
-        const sharedSecret = this.wallet.signingKey.computeSharedSecret(request.detail.publicKey);
-        sendResponse({ sharedSecret, request_id: request.detail.request_id });
-      }
+      (async () => {
+        await this.messageHandler(request, sendResponse);
+      })();
+      return true;
     });
   }
-})();
 
-export {};
+  private async messageHandler(request: any, sendResponse: (response: any) => void): Promise<void> {
+    const messageType = request.msg ?? request.detail?.type;
+
+    switch (messageType) {
+      case MessageType.CREATE_NEW_WALLET:
+        sendResponse(await this.createNewWallet(request.data.password));
+        break;
+
+      case MessageType.UNLOCK_WALLET:
+        sendResponse(await this.unlockWallet(request.data.password));
+        break;
+
+      case MessageType.RESTORE_WALLET:
+        sendResponse(await this.restoreWallet(request.data.seeds, request.data.password));
+        break;
+
+      case MessageType.GET_WALLET:
+        sendResponse({ wallet: this.wallet, state: await this.getWalletState() });
+        break;
+
+      case MessageType.LOCK_WALLET:
+        this.lockWallet();
+        break;
+
+      case MessageType.GET_ENCRYPTOR_STATE:
+        sendResponse({ state: await this.getWalletState(), request_id: request.detail.request_id });
+        break;
+
+      case MessageType.GET_PUBLIC_KEY:
+        if (!this.wallet) return;
+        sendResponse({ publicKey: this.wallet.publicKey, request_id: request.detail.request_id });
+        break;
+
+      case MessageType.COMPUTE_SHARED_SECRET_KEY:
+        if (!this.wallet) return;
+        const sharedSecret = this.wallet.signingKey.computeSharedSecret(request.detail.publicKey);
+        sendResponse({ sharedSecret, request_id: request.detail.request_id });
+        break;
+
+      default:
+        sendResponse({ message: 'Requested action is not supported.' });
+        break;
+    }
+  }
+}
+
+new BackgroundScript();

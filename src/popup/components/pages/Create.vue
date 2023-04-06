@@ -1,32 +1,35 @@
 <script setup lang="ts">
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
-import Label from '../../shared/Label.vue';
-import Input from '../../shared/Input.vue';
 import { computed, ref } from 'vue';
-import Button from '../../shared/Button.vue';
-import { store } from '../../state/store';
 import { useRouter } from 'vue-router';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { MessageType } from '@/types';
+import { store } from '@/state/store';
+import Label from '@shared/Label.vue';
+import Input from '@shared/Input.vue';
+import Button from '@shared/Button.vue';
 
 const form = ref({
   password: '',
-  password_confirmation: '',
+  passwordConfirmation: '',
 });
 
 const isDisabled = computed(() => {
-  return form.value.password === '' || form.value.password !== form.value.password_confirmation;
+  return form.value.password === '' || form.value.password !== form.value.passwordConfirmation;
 });
 
 const router = useRouter();
 
 const createWallet = async () => {
   if (isDisabled.value) return;
+
   store.wallet = await chrome.runtime.sendMessage({
-    msg: 'createNewWallet',
+    msg: MessageType.CREATE_NEW_WALLET,
     data: {
       password: form.value.password,
     },
   });
-  router.push({ path: '/seeds' });
+
+  await router.push({ path: '/seeds' });
 };
 </script>
 
@@ -41,22 +44,20 @@ const createWallet = async () => {
     <div>
       <Label>Enter password</Label>
       <Input
-        name="password"
-        type="password"
         v-model="form.password"
         placeholder="Password"
+        type="password"
         @keyup.enter="createWallet()"
-      ></Input>
+      />
     </div>
     <div class="pt-2">
       <Label>Enter password confirmation</Label>
       <Input
-        name="password_confirmation"
-        v-model="form.password_confirmation"
+        v-model="form.passwordConfirmation"
         placeholder="Password confirmation"
         type="password"
         @keyup.enter="createWallet()"
-      ></Input>
+      />
     </div>
     <div class="pt-4">
       <Button :disabled="isDisabled" @click="createWallet()">Next</Button>
