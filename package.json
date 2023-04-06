@@ -6,10 +6,8 @@
   "type": "module",
   "license": "See license in LICENSE.md",
   "keywords": [
-    "chrome-extension",
-    "vue",
-    "vite",
-    "create-chrome-ext"
+    "encryptor",
+    "web3"
   ],
   "engines": {
     "node": ">=14.18.0"
