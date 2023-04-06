@@ -18,7 +18,7 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "fmt": "prettier --write '**/*.{vue,ts,json,css,scss,md}'"
+    "format": "prettier --write '**/*.{vue,ts,json,css,scss,md}'"
   },
   "dependencies": {
     "@headlessui/vue": "^1.7.11",
@@ -31,6 +31,7 @@
   "devDependencies": {
     "@crxjs/vite-plugin": "^1.0.12",
     "@types/chrome": "^0.0.218",
+    "@types/node": "^18.15.11",
     "@vitejs/plugin-vue": "^2.3.3",
     "autoprefixer": "^10.4.13",
     "postcss": "^8.4.21",

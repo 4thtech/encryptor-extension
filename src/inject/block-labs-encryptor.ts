@@ -1,70 +1,69 @@
-/**
- * Use the `block_labs_encryptor` methods listed below to issue requests to the 4th encryptor.
- */
-var blockLabsEncryptor = {
-  current_id: 1,
-  requests: {},
-  handshake_callback: null,
+declare global {
+  interface Window {
+    blockLabsEncryptor: BlockLabsEncryptor;
+  }
+}
 
-  requestHandshake: function (callback) {
-    this.handshake_callback = callback;
+type RequestCallback = (response: any) => void;
+
+class BlockLabsEncryptor {
+  private currentId = 1;
+  private requests: Record<number, RequestCallback> = {};
+  private handshakeCallback: (() => void) | null = null;
+
+  constructor() {
+    this.setupEventListener();
+  }
+
+  public requestHandshake(callback: () => void): void {
+    this.handshakeCallback = callback;
     this.dispatchCustomEvent('block_labs_encryptor_handshake', '');
-  },
+  }
 
-  getPublicKey: function (callback) {
-    const request = {
-      type: 'getPublicKey',
-    };
-    this.dispatchCustomEvent('block_labs_encryptor_request', request, callback);
-  },
+  public getPublicKey(callback: RequestCallback): void {
+    this.dispatchCustomEvent('block_labs_encryptor_request', { type: 'getPublicKey' }, callback);
+  }
 
-  computeSharedSecretKey: function (publicKey, callback) {
-    const request = {
-      type: 'computeSharedSecretKey',
-      publicKey
-    };
-    this.dispatchCustomEvent('block_labs_encryptor_request', request, callback);
-  },
-
-  // Send the customEvent
-  dispatchCustomEvent: function (name, data, callback) {
-    this.requests[this.current_id] = callback;
-    data = Object.assign(
-      {
-        request_id: this.current_id,
-      },
-      data,
+  public computeSharedSecretKey(publicKey: string, callback: RequestCallback): void {
+    this.dispatchCustomEvent(
+      'block_labs_encryptor_request',
+      { type: 'computeSharedSecretKey', publicKey },
+      callback,
     );
-    document.dispatchEvent(
-      new CustomEvent(name, {
-        detail: data,
-      }),
-    );
+  }
 
-    this.current_id++;
-  },
-};
-
-window.addEventListener(
-  'message',
-  function (event) {
-    // We only accept messages from ourselves
-    if (event.source !== window) return;
-    if (event.data.type && event.data.type === 'block_labs_encryptor_response') {
-      const response = event.data.response;
-      if (response && response.request_id) {
-        if (blockLabsEncryptor.requests[response.request_id]) {
-          blockLabsEncryptor.requests[response.request_id](response);
-        }
-      }
-    } else if (
-      event.data.type &&
-      event.data.type === 'block_labs_encryptor_handshake'
-    ) {
-      if (blockLabsEncryptor.handshake_callback) {
-        blockLabsEncryptor.handshake_callback();
-      }
+  private dispatchCustomEvent(name: string, data: any, callback?: RequestCallback): void {
+    if (callback) {
+      this.requests[this.currentId] = callback;
     }
-  },
-  false,
-);
+    data = { ...data, request_id: this.currentId };
+    document.dispatchEvent(new CustomEvent(name, { detail: data }));
+
+    this.currentId++;
+  }
+
+  private setupEventListener(): void {
+    window.addEventListener(
+      'message',
+      (event: MessageEvent) => {
+        if (event.source !== window) return;
+
+        const { type, response } = event.data;
+
+        switch (type) {
+          case 'block_labs_encryptor_response':
+            this.requests[response.request_id]?.(response);
+            break;
+          case 'block_labs_encryptor_handshake':
+            this.handshakeCallback?.();
+            break;
+        }
+      },
+      false,
+    );
+  }
+}
+
+window.blockLabsEncryptor = new BlockLabsEncryptor();
+
+export {};

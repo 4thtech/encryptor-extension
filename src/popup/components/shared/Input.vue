@@ -1,13 +1,13 @@
 <script setup lang="ts">
-type SupportCardFormInputProps = {
+type InputProps = {
   modelValue: string;
 };
 
+defineProps<InputProps>();
 const emit = defineEmits(['update:modelValue']);
-defineProps<SupportCardFormInputProps>();
-const handleEvent = (event: Event) => {
-  const target = event.target as HTMLInputElement;
 
+const onInput = (event: Event) => {
+  const target = event.target as HTMLInputElement;
   emit('update:modelValue', target.value);
 };
 </script>
@@ -16,7 +16,7 @@ const handleEvent = (event: Event) => {
   <input
     :value="modelValue"
     type="text"
-    @input="handleEvent"
+    @input="onInput"
     class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm"
   />
 </template>

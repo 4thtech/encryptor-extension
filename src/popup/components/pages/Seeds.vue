@@ -1,7 +1,7 @@
 <script lang="ts" setup>
-import { store } from '../../state/store';
-import Button from '../../shared/Button.vue';
 import { useRouter } from 'vue-router';
+import { store } from '@/state/store';
+import Button from '@shared/Button.vue';
 
 const router = useRouter();
 </script>

@@ -1,15 +1,14 @@
 import { createApp } from 'vue';
-import './style.css';
-import App from './Popup.vue';
 import { createRouter, createWebHistory } from 'vue-router';
-import Welcome from './components/Welcome.vue';
-import Create from './components/Create.vue';
-import Seeds from './components/Seeds.vue';
-import Main from './components/Main.vue';
-import Unlock from './components/Unlock.vue';
-import Restore from './components/Restore.vue';
+import './style.css';
+import App from '@/popup/Popup.vue';
+import Welcome from '@pages/Welcome.vue';
+import Create from '@pages/Create.vue';
+import Seeds from '@pages/Seeds.vue';
+import Main from '@pages/Main.vue';
+import Unlock from '@pages/Unlock.vue';
+import Restore from '@pages/Restore.vue';
 
-const app = createApp(App);
 const router = createRouter({
   history: createWebHistory(),
   routes: [
@@ -21,5 +20,5 @@ const router = createRouter({
     { path: '/restore', component: Restore },
   ],
 });
-app.use(router);
-app.mount('#app');
+
+createApp(App).use(router).mount('#app');

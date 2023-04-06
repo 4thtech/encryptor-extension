@@ -1,38 +1,46 @@
-const setupInjection = () => {
-  try {
-    const scriptTag = document.createElement('script');
-    scriptTag.src = chrome.runtime.getURL('src/js/block_labs_encryptor.js');
-    const container = document.head || document.documentElement;
-    container.insertBefore(scriptTag, container.children[0]);
-  } catch (e) {
-    console.log('blockLabs injection failed.', e);
+class ContentScript {
+  constructor() {
+    this.injectScript();
+    this.addEventListeners();
   }
-};
 
-const sendRequestToBackground = async (request: any) => {
-  const response = await chrome.runtime.sendMessage({ detail: request.detail });
-  window.postMessage(
-    {
-      type: 'block_labs_encryptor_response',
-      response,
-    },
-    window.location.origin,
-  );
-};
+  private injectScript(): void {
+    const developmentPath = 'src/inject/block-labs-encryptor.ts.js';
+    const productionPath = 'assets/inject.js';
+    const injectedScriptUrl = chrome.runtime.getURL(
+      import.meta.env.DEV ? developmentPath : productionPath,
+    );
 
-document.addEventListener('block_labs_encryptor_handshake', () => {
-  window.postMessage(
-    {
-      type: 'block_labs_encryptor_handshake',
-    },
-    window.location.origin,
-  );
-});
+    try {
+      const scriptTag = document.createElement('script');
+      scriptTag.src = injectedScriptUrl;
+      (document.head || document.documentElement).appendChild(scriptTag);
+    } catch (e) {
+      console.error('Encryptor injection failed.', e);
+    }
+  }
 
-document.addEventListener('block_labs_encryptor_request', (request) => {
-  sendRequestToBackground(request);
-});
+  private postMessageToWindow(type: string, response?: any): void {
+    window.postMessage({ type, response }, window.location.origin);
+  }
 
-setupInjection();
+  private async sendRequestToBackground(event: Event): Promise<void> {
+    const request = event as CustomEvent<{ detail: any }>;
+    const response = await chrome.runtime.sendMessage({ detail: request.detail });
+    this.postMessageToWindow('block_labs_encryptor_response', response);
+  }
+
+  private addEventListeners(): void {
+    document.addEventListener('block_labs_encryptor_handshake', () =>
+      this.postMessageToWindow('block_labs_encryptor_handshake'),
+    );
+
+    document.addEventListener('block_labs_encryptor_request', (event) =>
+      this.sendRequestToBackground(event),
+    );
+  }
+}
+
+new ContentScript();
 
 export {};

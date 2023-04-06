@@ -1,41 +1,41 @@
 <script setup lang="ts">
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
-import Label from '../../shared/Label.vue';
-import Input from '../../shared/Input.vue';
 import { computed, ref } from 'vue';
-import Button from '../../shared/Button.vue';
-import { store } from '../../state/store';
 import { useRouter } from 'vue-router';
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline';
+import { MessageType } from '@/types';
+import { store } from '@/state/store';
+import Label from '@shared/Label.vue';
+import Input from '@shared/Input.vue';
+import Button from '@shared/Button.vue';
 
 const form = ref({
   seeds: '',
   password: '',
-  password_confirmation: '',
+  passwordConfirmation: '',
 });
+const error = ref();
 
 const router = useRouter();
-const error = ref();
+
 const isDisabled = computed(() => {
-  return (
-    form.value.password === '' ||
-    form.value.password !== form.value.password_confirmation ||
-    form.value.seeds === ''
-  );
+  const { password, passwordConfirmation, seeds } = form.value;
+  return !password || !seeds || password !== passwordConfirmation;
 });
 
 const restore = async () => {
   if (isDisabled.value) return;
 
   const wallet = await chrome.runtime.sendMessage({
-    msg: 'restoreWallet',
+    msg: MessageType.RESTORE_WALLET,
     data: {
       password: form.value.password,
       seeds: form.value.seeds,
     },
   });
+
   if (wallet) {
     store.wallet = wallet;
-    router.push({ path: '/main' });
+    await router.push({ path: '/main' });
   } else {
     error.value = 'Invalid seeds.';
   }
@@ -53,28 +53,24 @@ const restore = async () => {
     <div>
       <Label>Enter seeds</Label>
       <textarea
-        name="seeds"
         v-model="form.seeds"
         placeholder="Seeds"
         class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary text-sm"
       />
     </div>
-
     <div class="pt-2">
       <Label>Enter password</Label>
       <Input
-        name="password"
-        type="password"
         v-model="form.password"
         placeholder="Password"
+        type="password"
         @keyup.enter="restore()"
       ></Input>
     </div>
     <div class="pt-2">
       <Label>Enter password confirmation</Label>
       <Input
-        name="password_confirmation"
-        v-model="form.password_confirmation"
+        v-model="form.passwordConfirmation"
         placeholder="Password confirmation"
         type="password"
         @keyup.enter="restore()"
