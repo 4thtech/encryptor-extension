@@ -10,6 +10,7 @@ export enum MessageType {
   RESTORE_WALLET = 'restoreWallet',
   GET_WALLET = 'getWallet',
   LOCK_WALLET = 'lockWallet',
+  GET_ENCRYPTOR_STATE = 'getEncryptorState',
   GET_PUBLIC_KEY = 'getPublicKey',
   COMPUTE_SHARED_SECRET_KEY = 'computeSharedSecretKey',
 }

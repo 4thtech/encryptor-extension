@@ -97,6 +97,10 @@ class BackgroundScript {
         this.lockWallet();
         break;
 
+      case MessageType.GET_ENCRYPTOR_STATE:
+        sendResponse({ state: await this.getWalletState(), request_id: request.detail.request_id });
+        break;
+
       case MessageType.GET_PUBLIC_KEY:
         if (!this.wallet) return;
         sendResponse({ publicKey: this.wallet.publicKey, request_id: request.detail.request_id });

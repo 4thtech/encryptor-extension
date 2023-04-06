@@ -20,6 +20,14 @@ class BlockLabsEncryptor {
     this.dispatchCustomEvent('block_labs_encryptor_handshake', '');
   }
 
+  public getState(callback: RequestCallback): void {
+    this.dispatchCustomEvent(
+      'block_labs_encryptor_request',
+      { type: 'getEncryptorState' },
+      callback,
+    );
+  }
+
   public getPublicKey(callback: RequestCallback): void {
     this.dispatchCustomEvent('block_labs_encryptor_request', { type: 'getPublicKey' }, callback);
   }
@@ -54,6 +62,7 @@ class BlockLabsEncryptor {
           case 'block_labs_encryptor_response':
             this.requests[response.request_id]?.(response);
             break;
+
           case 'block_labs_encryptor_handshake':
             this.handshakeCallback?.();
             break;
