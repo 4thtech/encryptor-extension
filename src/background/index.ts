@@ -5,12 +5,27 @@ class BackgroundScript {
   private wallet?: HDNodeWallet;
 
   constructor() {
+    this.tryToUnlock().then();
     this.addListener();
+  }
+
+  private async tryToUnlock(): Promise<void> {
+    const encryptionPassword = await this.getEncryptionPassword();
+    if (!encryptionPassword) {
+      return;
+    }
+
+    await this.unlockWallet(encryptionPassword);
   }
 
   private async storeEncryptedWallet(wallet: HDNodeWallet, password: string): Promise<void> {
     const encryptedWallet = await wallet.encrypt(password);
     await chrome.storage.local.set({ encryptedWallet });
+    await this.storeEncryptionPassword(password);
+  }
+
+  private async storeEncryptionPassword(encryptionPassword: string): Promise<void> {
+    await chrome.storage.session.set({ encryptionPassword });
   }
 
   private async getEncryptedWallet(): Promise<string | undefined> {
@@ -18,19 +33,33 @@ class BackgroundScript {
     return encryptedWallet;
   }
 
-  public async getWalletState(): Promise<WalletState> {
+  private async getEncryptionPassword(): Promise<string | undefined> {
+    const { encryptionPassword } = await chrome.storage.session.get();
+    return encryptionPassword;
+  }
+
+  private async getWalletState(): Promise<WalletState> {
     if (this.wallet) {
       return WalletState.UNLOCKED;
     }
 
-    return (await this.getEncryptedWallet()) ? WalletState.LOCKED : WalletState.NOT_GENERATED;
+    const encryptedWallet = await this.getEncryptedWallet();
+
+    if (encryptedWallet) {
+      await this.tryToUnlock();
+      return this.wallet ? WalletState.UNLOCKED : WalletState.LOCKED;
+    }
+
+    return WalletState.NOT_GENERATED;
   }
 
-  public lockWallet() {
+  private async lockWallet(): Promise<boolean> {
     this.wallet = undefined;
+    await chrome.storage.session.clear();
+    return true;
   }
 
-  public async createNewWallet(password: string): Promise<HDNodeWallet> {
+  private async createNewWallet(password: string): Promise<HDNodeWallet> {
     const wallet = ethers.Wallet.createRandom();
     await this.storeEncryptedWallet(wallet, password);
     this.wallet = wallet;
@@ -46,6 +75,8 @@ class BackgroundScript {
     this.wallet = (await ethers.Wallet.fromEncryptedJson(encryptedWallet, password).catch(
       () => undefined,
     )) as HDNodeWallet;
+
+    await this.storeEncryptionPassword(password);
 
     return this.wallet;
   }
@@ -90,25 +121,26 @@ class BackgroundScript {
         break;
 
       case MessageType.GET_WALLET:
-        sendResponse({ wallet: this.wallet, state: await this.getWalletState() });
+        sendResponse({ wallet: this.wallet });
         break;
 
       case MessageType.LOCK_WALLET:
-        this.lockWallet();
+        sendResponse(await this.lockWallet());
         break;
 
       case MessageType.GET_ENCRYPTOR_STATE:
-        sendResponse({ state: await this.getWalletState(), request_id: request.detail.request_id });
+        sendResponse({
+          state: await this.getWalletState(),
+          request_id: request.detail?.request_id,
+        });
         break;
 
       case MessageType.GET_PUBLIC_KEY:
-        if (!this.wallet) return;
-        sendResponse({ publicKey: this.wallet.publicKey, request_id: request.detail.request_id });
+        sendResponse({ publicKey: this.wallet?.publicKey, request_id: request.detail.request_id });
         break;
 
       case MessageType.COMPUTE_SHARED_SECRET_KEY:
-        if (!this.wallet) return;
-        const sharedSecret = this.wallet.signingKey.computeSharedSecret(request.detail.publicKey);
+        const sharedSecret = this.wallet?.signingKey.computeSharedSecret(request.detail.publicKey);
         sendResponse({ sharedSecret, request_id: request.detail.request_id });
         break;
 
