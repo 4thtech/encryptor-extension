@@ -44,7 +44,7 @@ const restore = async () => {
 
 <template>
   <div class="p-4 bg-gray-100 shadow-m flex items-center space-x-4">
-    <router-link to="/popup.html">
+    <router-link to="/welcome">
       <ArrowLeftIcon class="h-6 w-6 cursor-pointer" />
     </router-link>
     <div class="text-[1rem]">Restore</div>
