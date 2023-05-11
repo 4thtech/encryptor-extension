@@ -1,7 +1,6 @@
 import { defineManifest } from '@crxjs/vite-plugin';
 import { version } from '../package.json';
 
-const isProduction = process.env.NODE_ENV === 'production';
 const [major, minor, patch] = version.replace(/[^\d.-]+/g, '').split(/[.-]/);
 
 export default defineManifest({
@@ -27,9 +26,7 @@ export default defineManifest({
   content_scripts: [
     {
       matches: ['<all_urls>'],
-      js: ['src/content/index.ts', isProduction ? '' : 'src/inject/block-labs-encryptor.ts'].filter(
-        (value) => value !== '',
-      ),
+      js: ['src/content/index.ts'],
     },
   ],
   web_accessible_resources: [
@@ -39,8 +36,7 @@ export default defineManifest({
         'icons/logo-32.png',
         'icons/logo-48.png',
         'icons/logo-128.png',
-        isProduction ? 'assets/inject.js' : '',
-      ].filter((value) => value !== ''),
+      ],
       matches: ['<all_urls>'],
     },
   ],

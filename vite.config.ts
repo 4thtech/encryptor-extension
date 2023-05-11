@@ -19,9 +19,6 @@ export default defineConfig(() => {
       emptyOutDir: true,
       outDir: 'build',
       rollupOptions: {
-        input: {
-          inject: 'src/inject/block-labs-encryptor.ts',
-        },
         output: {
           entryFileNames: 'assets/[name].js',
           chunkFileNames: 'assets/chunk-[hash].js',

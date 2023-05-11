@@ -1,23 +1,6 @@
 class ContentScript {
   constructor() {
-    this.injectScript();
     this.addEventListeners();
-  }
-
-  private injectScript(): void {
-    const developmentPath = 'src/inject/block-labs-encryptor.ts.js';
-    const productionPath = 'assets/inject.js';
-    const injectedScriptUrl = chrome.runtime.getURL(
-      import.meta.env.DEV ? developmentPath : productionPath,
-    );
-
-    try {
-      const scriptTag = document.createElement('script');
-      scriptTag.src = injectedScriptUrl;
-      (document.head || document.documentElement).appendChild(scriptTag);
-    } catch (e) {
-      console.error('Encryptor injection failed.', e);
-    }
   }
 
   private postMessageToWindow(type: string, response?: any): void {
@@ -26,8 +9,13 @@ class ContentScript {
 
   private async sendRequestToBackground(event: Event): Promise<void> {
     const request = event as CustomEvent<{ detail: any }>;
-    const response = await chrome.runtime.sendMessage({ detail: request.detail });
-    this.postMessageToWindow('block_labs_encryptor_response', response);
+
+    try {
+      const response = await chrome.runtime.sendMessage({ detail: request.detail });
+      this.postMessageToWindow('block_labs_encryptor_response', response);
+    } catch (error) {
+      this.postMessageToWindow('block_labs_encryptor_error', error);
+    }
   }
 
   private addEventListeners(): void {
