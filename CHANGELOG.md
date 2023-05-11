@@ -27,3 +27,7 @@ Summary
 - fix: Message passing if wallet is undefined
 - fix: Unlocking when service worker is inactive
 - feat: Add loading screen
+
+## 0.0.3 [2023.05.11]
+
+- remove: Injected code
