@@ -1,6 +1,24 @@
+import { EventName, MessageType } from '@/types';
+
 class ContentScript {
   constructor() {
+    this.addEncryptorInfoToDom();
     this.addEventListeners();
+    this.addMessageListeners();
+  }
+
+  private addEncryptorInfoToDom(): void {
+    const elementId = 'block-labs-encryptor-extension';
+    let element = document.getElementById(elementId);
+
+    if (!element) {
+      element = document.createElement('div');
+      element.id = elementId;
+      element.style.display = 'none';
+      document.body.appendChild(element);
+    }
+
+    element.setAttribute('data-version', import.meta.env.APP_VERSION);
   }
 
   private postMessageToWindow(type: string, response?: any): void {
@@ -12,19 +30,40 @@ class ContentScript {
 
     try {
       const response = await chrome.runtime.sendMessage({ detail: request.detail });
-      this.postMessageToWindow('block_labs_encryptor_response', response);
+      this.postMessageToWindow(EventName.BLOCK_LABS_ENCRYPTOR_RESPONSE, response);
     } catch (error) {
-      this.postMessageToWindow('block_labs_encryptor_error', error);
+      this.postMessageToWindow(EventName.BLOCK_LABS_ENCRYPTOR_ERROR, error);
     }
   }
 
   private addEventListeners(): void {
-    document.addEventListener('block_labs_encryptor_handshake', () =>
-      this.postMessageToWindow('block_labs_encryptor_handshake'),
+    document.addEventListener(EventName.BLOCK_LABS_ENCRYPTOR_HANDSHAKE, () =>
+      this.postMessageToWindow(EventName.BLOCK_LABS_ENCRYPTOR_HANDSHAKE),
     );
 
-    document.addEventListener('block_labs_encryptor_request', (event) =>
+    document.addEventListener(EventName.BLOCK_LABS_ENCRYPTOR_REQUEST, (event) =>
       this.sendRequestToBackground(event),
+    );
+  }
+
+  private addMessageListeners(): void {
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      switch (message.action) {
+        case MessageType.EMIT_HEARTBEAT:
+          this.dispatchCustomEvent(EventName.BLOCK_LABS_ENCRYPTOR_HEARTBEAT, message.data);
+          break;
+        case MessageType.EMIT_ENCRYPTOR_STATE_CHANGE:
+          this.dispatchCustomEvent(EventName.BLOCK_LABS_ENCRYPTOR_STATE_CHANGE, message.data);
+          break;
+      }
+    });
+  }
+
+  private dispatchCustomEvent(name: string, data?: {}): void {
+    document.dispatchEvent(
+      new CustomEvent(name, {
+        detail: data,
+      }),
     );
   }
 }

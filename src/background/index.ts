@@ -7,6 +7,19 @@ class BackgroundScript {
   constructor() {
     this.tryToUnlock().then();
     this.addListener();
+    this.setupHeartbeat();
+  }
+
+  private setupHeartbeat() {
+    const heartbeat = () => {
+      this.sendMessageToContentScript(MessageType.EMIT_HEARTBEAT, {
+        timestamp: new Date(),
+      });
+    };
+
+    heartbeat(); // Run immediately
+
+    setInterval(heartbeat, 30 * 1000); // Emit heartbeat every 30s
   }
 
   private async tryToUnlock(): Promise<void> {
@@ -110,14 +123,17 @@ class BackgroundScript {
     switch (messageType) {
       case MessageType.CREATE_NEW_WALLET:
         sendResponse(await this.createNewWallet(request.data.password));
+        this.emitEncryptorStateChange();
         break;
 
       case MessageType.UNLOCK_WALLET:
         sendResponse(await this.unlockWallet(request.data.password));
+        this.emitEncryptorStateChange();
         break;
 
       case MessageType.RESTORE_WALLET:
         sendResponse(await this.restoreWallet(request.data.seeds, request.data.password));
+        this.emitEncryptorStateChange();
         break;
 
       case MessageType.GET_WALLET:
@@ -126,6 +142,7 @@ class BackgroundScript {
 
       case MessageType.LOCK_WALLET:
         sendResponse(await this.lockWallet());
+        this.emitEncryptorStateChange();
         break;
 
       case MessageType.GET_ENCRYPTOR_STATE:
@@ -148,6 +165,22 @@ class BackgroundScript {
         sendResponse({ message: 'Requested action is not supported.' });
         break;
     }
+  }
+
+  private emitEncryptorStateChange() {
+    this.getWalletState().then((state) => {
+      this.sendMessageToContentScript(MessageType.EMIT_ENCRYPTOR_STATE_CHANGE, {
+        state,
+      });
+    });
+  }
+
+  private sendMessageToContentScript(action: MessageType, data?: {}) {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      if (tabs[0] && tabs[0].id) {
+        chrome.tabs.sendMessage(tabs[0].id, { action, data }).catch(() => {});
+      }
+    });
   }
 }
 
