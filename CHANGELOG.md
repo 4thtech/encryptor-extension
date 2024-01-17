@@ -31,3 +31,9 @@ Summary
 ## 0.0.3 [2023.05.11]
 
 - remove: Injected code
+
+## 0.0.4 [2024.01.17]
+
+- feat: Emit Encryptor heartbeat
+- feat: Emit Encryptor state change
+- feat: Add Encryptor version to custom DOM element
