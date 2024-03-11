@@ -37,3 +37,7 @@ Summary
 - feat: Emit Encryptor heartbeat
 - feat: Emit Encryptor state change
 - feat: Add Encryptor version to custom DOM element
+
+## 0.0.5 [2024.03.11]
+
+- feat: Inject content script at document_start for earlier execution
